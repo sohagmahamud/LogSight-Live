@@ -13,6 +13,17 @@ const upload = multer({ storage: multer.memoryStorage() });
 app.use(express.json());
 app.use(express.static(__dirname));
 
+// Health check for deployment verification
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'UP',
+    timestamp: new Date().toISOString(),
+    host: req.get('host'),
+    protocol: req.protocol,
+    env: process.env.NODE_ENV || 'production'
+  });
+});
+
 const MARATHON_SYSTEM_INSTRUCTION = `You are an Autonomous SRE Marathon Agent. 
 Your task is to conduct a multi-level autonomous investigation of a production incident.
 
@@ -80,18 +91,15 @@ app.post('/analyze', upload.array('images'), async (req, res) => {
     const files = req.files || [];
 
     const isMarathon = mode === 'MARATHON';
-    // Use gemini-3-pro-preview for deep architectural probes and gemini-3-flash-preview for quick assessment.
     const modelName = isMarathon ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
     
-    console.log(`[LogSight] Starting ${mode} analysis using model ${modelName}...`);
+    console.log(`[LogSight] Starting ${mode} analysis using model ${modelName} on host ${req.get('host')}...`);
 
-    // Only Gemini 3 series supports thinkingBudget
     const thinkingConfig = isMarathon ? { thinkingBudget: 24000 } : undefined;
 
     const parts = [{ text: isMarathon ? "Begin autonomous marathon investigation." : "Perform quick triage." }];
     if (logContent) parts.push({ text: `DATA_LOGS:\n${logContent}` });
     
-    // Convert uploaded image buffers to base64 inlineData for the Gemini model
     for (const file of files) {
       parts.push({
         inlineData: { mimeType: file.mimetype, data: file.buffer.toString('base64') }
@@ -115,7 +123,6 @@ app.post('/analyze', upload.array('images'), async (req, res) => {
       throw new Error("Gemini returned an empty response. Check safety filters.");
     }
 
-    // Extract JSON from potential Markdown blocks
     const cleanedText = text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(cleanedText);
     res.json(result);
@@ -137,7 +144,6 @@ app.post('/chat', async (req, res) => {
     const ai = new GoogleGenAI({ apiKey });
     const { message, history } = req.body;
 
-    // Convert history to the format required by the Chat SDK
     const contents = (history || []).map(msg => ({
       role: msg.role === 'user' ? 'user' : 'model',
       parts: [{ text: msg.text }]

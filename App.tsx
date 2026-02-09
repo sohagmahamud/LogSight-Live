@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from './components/Button';
 import { HypothesisCard } from './components/HypothesisCard';
 import { GeminiService } from './services/geminiService';
@@ -15,20 +15,28 @@ const App: React.FC = () => {
   const [chatInput, setChatInput] = useState('');
   const [isChatting, setIsChatting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [healthStatus, setHealthStatus] = useState<any>(null);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const checkStatus = async () => {
+      const status = await GeminiService.checkHealth();
+      setHealthStatus(status);
+    };
+    checkStatus();
+  }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      // Convert FileList to Array and explicitly type the iterator
       Array.from(files).forEach((file: File) => {
         const reader = new FileReader();
         reader.onload = (ev: ProgressEvent<FileReader>) => {
           const result = ev.target?.result;
           if (typeof result === 'string') {
             const base64 = result.split(',')[1];
-            // Explicitly define newImage as FileData to satisfy compiler checks
             const newImage: FileData = { 
               name: file.name, 
               type: file.type, 
@@ -227,7 +235,6 @@ const App: React.FC = () => {
 
           {analysis && (
             <div className="space-y-8 animate-fade-in">
-              {/* Investigation Ledger Timeline */}
               <div className="space-y-4">
                 <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 flex items-center gap-2">
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -269,7 +276,6 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Root Cause Cards */}
               <div className="space-y-4">
                 <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 flex items-center gap-2">
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -282,7 +288,6 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* Chat Interface */}
               <div className="glass rounded-3xl overflow-hidden flex flex-col h-[500px]">
                 <div className="p-4 border-b border-white/5 bg-white/2 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -341,7 +346,7 @@ const App: React.FC = () => {
       </main>
 
       <footer className="mt-12 py-12 border-t border-white/5 text-center text-slate-600">
-        <div className="max-w-xl mx-auto px-6 space-y-4">
+        <div className="max-w-xl mx-auto px-6 space-y-6">
           <p className="text-xs uppercase tracking-[0.3em] font-bold">Marathon Core Engine</p>
           <div className="flex items-center justify-center gap-6">
              <div className="flex flex-col items-center gap-1">
@@ -357,6 +362,39 @@ const App: React.FC = () => {
                <div className="w-8 h-1 rounded-full bg-purple-500/30"></div>
              </div>
           </div>
+
+          <div className="pt-4 border-t border-white/5">
+             <button 
+              onClick={() => setShowDiagnostics(!showDiagnostics)}
+              className="text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-emerald-400 transition-colors"
+             >
+               {showDiagnostics ? 'Close Diagnostics' : 'System Diagnostics'}
+             </button>
+             
+             {showDiagnostics && (
+               <div className="mt-4 p-4 glass rounded-xl text-left mono text-[10px] space-y-2 animate-fade-in">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">HOST_ALIAS:</span>
+                    <span className="text-emerald-400">{window.location.host}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">BACKEND_STATUS:</span>
+                    <span className={healthStatus?.status === 'UP' ? 'text-emerald-400' : 'text-rose-400'}>
+                      {healthStatus?.status || 'CHECKING...'}
+                    </span>
+                  </div>
+                  {healthStatus?.error && (
+                    <div className="text-rose-400 break-all p-2 bg-rose-500/10 rounded mt-2">
+                      ERR: {healthStatus.error}
+                    </div>
+                  )}
+                  <div className="pt-2 border-t border-white/5 text-slate-500 italic">
+                    Note: If BACKEND_STATUS is UNREACHABLE, check Google Cloud Custom Domain Mappings.
+                  </div>
+               </div>
+             )}
+          </div>
+
           <p className="text-[10px] italic">Powered by Gemini 3 Pro with Recursive Thinking Signatures</p>
         </div>
       </footer>
