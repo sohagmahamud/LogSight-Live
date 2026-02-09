@@ -1,22 +1,17 @@
+
 {
   "name": "logsight-live",
-  "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "LogSight Live - AI-Powered Incident Analysis for SREs",
   "type": "module",
+  "main": "server.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "start": "node server.js",
+    "build": "echo 'No build step required for ESM-based frontend'"
   },
   "dependencies": {
-    "react": "^19.2.4",
     "@google/genai": "^1.40.0",
-    "react-dom": "^19.2.4"
-  },
-  "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1"
   }
 }
