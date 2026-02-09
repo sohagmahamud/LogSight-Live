@@ -2,16 +2,6 @@
 import { AnalysisResponse, AnalysisMode, ChatMessage, FileData } from "../types";
 
 export class GeminiService {
-  static async checkHealth(): Promise<any> {
-    try {
-      const res = await fetch('/health');
-      if (!res.ok) return { status: 'ERROR', code: res.status };
-      return await res.json();
-    } catch (e) {
-      return { status: 'UNREACHABLE', error: e instanceof Error ? e.message : String(e) };
-    }
-  }
-
   static async analyzeIncident(
     mode: AnalysisMode,
     logContent?: string,
@@ -44,8 +34,7 @@ export class GeminiService {
           const errorData = await res.json();
           errorMessage = errorData.error || errorMessage;
         } catch (e) {
-          const textError = await res.text();
-          errorMessage = `Server Error (${res.status}): The custom domain mapping might be misconfigured.`;
+          errorMessage = `Server Error (${res.status}): The investigation engine is temporarily unavailable.`;
         }
         throw new Error(errorMessage);
       }
@@ -53,7 +42,7 @@ export class GeminiService {
       return await res.json();
     } catch (e) {
       if (e instanceof Error && e.name === 'TypeError') {
-        throw new Error("Network connection failed. Verify DNS propagation and Cloud Run custom domain mapping.");
+        throw new Error("Network connection failed. Please check your internet connection or deployment status.");
       }
       throw e;
     }

@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from './components/Button';
 import { HypothesisCard } from './components/HypothesisCard';
 import { GeminiService } from './services/geminiService';
@@ -15,18 +15,8 @@ const App: React.FC = () => {
   const [chatInput, setChatInput] = useState('');
   const [isChatting, setIsChatting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
-  const [healthStatus, setHealthStatus] = useState<any>(null);
 
   const imageInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const checkStatus = async () => {
-      const status = await GeminiService.checkHealth();
-      setHealthStatus(status);
-    };
-    checkStatus();
-  }, []);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -362,39 +352,6 @@ const App: React.FC = () => {
                <div className="w-8 h-1 rounded-full bg-purple-500/30"></div>
              </div>
           </div>
-
-          <div className="pt-4 border-t border-white/5">
-             <button 
-              onClick={() => setShowDiagnostics(!showDiagnostics)}
-              className="text-[10px] font-bold uppercase tracking-widest text-slate-500 hover:text-emerald-400 transition-colors"
-             >
-               {showDiagnostics ? 'Close Diagnostics' : 'System Diagnostics'}
-             </button>
-             
-             {showDiagnostics && (
-               <div className="mt-4 p-4 glass rounded-xl text-left mono text-[10px] space-y-2 animate-fade-in">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">HOST_ALIAS:</span>
-                    <span className="text-emerald-400">{window.location.host}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">BACKEND_STATUS:</span>
-                    <span className={healthStatus?.status === 'UP' ? 'text-emerald-400' : 'text-rose-400'}>
-                      {healthStatus?.status || 'CHECKING...'}
-                    </span>
-                  </div>
-                  {healthStatus?.error && (
-                    <div className="text-rose-400 break-all p-2 bg-rose-500/10 rounded mt-2">
-                      ERR: {healthStatus.error}
-                    </div>
-                  )}
-                  <div className="pt-2 border-t border-white/5 text-slate-500 italic">
-                    Note: If BACKEND_STATUS is UNREACHABLE, check Google Cloud Custom Domain Mappings.
-                  </div>
-               </div>
-             )}
-          </div>
-
           <p className="text-[10px] italic">Powered by Gemini 3 Pro with Recursive Thinking Signatures</p>
         </div>
       </footer>

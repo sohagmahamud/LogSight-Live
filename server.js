@@ -13,17 +13,6 @@ const upload = multer({ storage: multer.memoryStorage() });
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Health check for deployment verification
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'UP',
-    timestamp: new Date().toISOString(),
-    host: req.get('host'),
-    protocol: req.protocol,
-    env: process.env.NODE_ENV || 'production'
-  });
-});
-
 const MARATHON_SYSTEM_INSTRUCTION = `You are an Autonomous SRE Marathon Agent. 
 Your task is to conduct a multi-level autonomous investigation of a production incident.
 
@@ -93,7 +82,7 @@ app.post('/analyze', upload.array('images'), async (req, res) => {
     const isMarathon = mode === 'MARATHON';
     const modelName = isMarathon ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
     
-    console.log(`[LogSight] Starting ${mode} analysis using model ${modelName} on host ${req.get('host')}...`);
+    console.log(`[LogSight] Starting ${mode} analysis using model ${modelName}...`);
 
     const thinkingConfig = isMarathon ? { thinkingBudget: 24000 } : undefined;
 
