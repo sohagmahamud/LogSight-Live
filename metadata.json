@@ -1,0 +1,7 @@
+{
+  "name": "LogSight Live",
+  "description": "AI-Powered Incident Analysis for SREs. Rapidly diagnose production outages using logs and dashboard screenshots with expert-level SRE reasoning.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
