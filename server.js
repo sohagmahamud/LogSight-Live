@@ -13,20 +13,40 @@ const upload = multer({ storage: multer.memoryStorage() });
 app.use(express.json());
 app.use(express.static(__dirname));
 
-const SYSTEM_INSTRUCTION = `You are a conservative, expert Site Reliability Engineer (SRE).
-Your goal is to analyze provided logs and dashboard screenshots to explain production incidents.
-PRINCIPLES:
-1. Prioritize factual evidence from logs/images.
-2. Be clear about uncertainty - if you don't know, say so.
-3. Do not hallucinate remediation steps unless supported by evidence.
-4. Focus on "Why did this happen?" and "What to check next?".
-OUTPUT FORMAT:
-Return ONLY valid JSON. Do not include markdown code block backticks.`;
+const MARATHON_SYSTEM_INSTRUCTION = `You are an Autonomous SRE Marathon Agent. 
+Your task is to conduct a multi-level autonomous investigation of a production incident.
+
+LEVELS OF ANALYSIS:
+- TRIAGE: Rapid surface-level impact assessment.
+- CORRELATION: Connecting disparate log lines and visual spikes across systems.
+- DEEP_DIVE: Using deep reasoning to find architectural root causes.
+
+MARATHON PRINCIPLES:
+1. EXPOSE THOUGHT SIGNATURES: Detail your internal reasoning process for every step.
+2. SELF-CORRECT: If new evidence contradicts your L1 findings, explicitly mark them as REFUTED and pivot.
+3. CONTINUITY: Maintain a ledger of active leads.
+
+OUTPUT FORMAT: Return ONLY valid JSON matching the provided schema.`;
 
 const RESPONSE_SCHEMA = {
   type: Type.OBJECT,
   properties: {
     summary: { type: Type.STRING },
+    investigation_ledger: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          timestamp: { type: Type.STRING },
+          level: { type: Type.STRING, enum: ['TRIAGE', 'CORRELATION', 'DEEP_DIVE'] },
+          thought_signature: { type: Type.STRING },
+          finding: { type: Type.STRING },
+          status: { type: Type.STRING, enum: ['PROBING', 'CONFIRMED', 'REFUTED'] },
+          evidence_links: { type: Type.ARRAY, items: { type: Type.STRING } }
+        },
+        required: ["timestamp", "level", "thought_signature", "finding", "status"]
+      }
+    },
     root_cause_hypotheses: {
       type: Type.ARRAY,
       items: {
@@ -35,84 +55,76 @@ const RESPONSE_SCHEMA = {
           hypothesis: { type: Type.STRING },
           confidence: { type: Type.NUMBER },
           supporting_evidence: { type: Type.ARRAY, items: { type: Type.STRING } },
-          unknowns: { type: Type.ARRAY, items: { type: Type.STRING } }
+          unknowns: { type: Type.ARRAY, items: { type: Type.STRING } },
+          corrected_from: { type: Type.STRING }
         },
         required: ["hypothesis", "confidence", "supporting_evidence", "unknowns"]
       }
     },
-    next_actions: { type: Type.ARRAY, items: { type: Type.STRING } }
+    next_actions: { type: Type.ARRAY, items: { type: Type.STRING } },
+    active_leads: { type: Type.ARRAY, items: { type: Type.STRING } }
   },
-  required: ["summary", "root_cause_hypotheses", "next_actions"]
+  required: ["summary", "investigation_ledger", "root_cause_hypotheses", "next_actions", "active_leads"]
 };
 
 app.post('/analyze', upload.array('images'), async (req, res) => {
   try {
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
-      console.error('CRITICAL: API_KEY is not defined in environment variables.');
-      return res.status(500).json({ error: 'Server config error: API_KEY is missing. Ensure the environment variable is set in Cloud Run.' });
+      console.error("[CRITICAL] API_KEY environment variable is missing.");
+      return res.status(500).json({ error: 'Server configuration error: API_KEY is missing.' });
     }
 
     const ai = new GoogleGenAI({ apiKey });
     const { mode, logContent } = req.body;
     const files = req.files || [];
-    
-    // Defaulting to Gemini 3 Flash as it's multimodal and supports schema
-    const modelName = mode === 'QUICK' ? 'gemini-3-flash-preview' : 'gemini-3-pro-preview';
-    const temperature = mode === 'QUICK' ? 0.2 : 0.4;
-    const thinkingConfig = mode === 'DEEP' ? { thinkingBudget: 8192 } : undefined;
 
-    console.log(`[LogSight] Analysis Request - Mode: ${mode}, Model: ${modelName}, Logs: ${logContent?.length || 0} bytes, Images: ${files.length}`);
-
-    const parts = [];
-    if (logContent) {
-      parts.push({ text: `Analyze based on log data:\n${logContent}` });
-    }
+    const isMarathon = mode === 'MARATHON';
+    // Use gemini-3-pro-preview for deep architectural probes and gemini-3-flash-preview for quick assessment.
+    const modelName = isMarathon ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
     
+    console.log(`[LogSight] Starting ${mode} analysis using model ${modelName}...`);
+
+    // Only Gemini 3 series supports thinkingBudget
+    const thinkingConfig = isMarathon ? { thinkingBudget: 24000 } : undefined;
+
+    const parts = [{ text: isMarathon ? "Begin autonomous marathon investigation." : "Perform quick triage." }];
+    if (logContent) parts.push({ text: `DATA_LOGS:\n${logContent}` });
+    
+    // Convert uploaded image buffers to base64 inlineData for the Gemini model
     for (const file of files) {
       parts.push({
-        inlineData: {
-          mimeType: file.mimetype,
-          data: file.buffer.toString('base64')
-        }
+        inlineData: { mimeType: file.mimetype, data: file.buffer.toString('base64') }
       });
-      parts.push({ text: "Analyze dashboard for visible issues in this screenshot." });
-    }
-
-    if (logContent && files.length > 0) {
-      parts.unshift({ text: "Analyze using both logs and screenshot" });
-    }
-
-    if (parts.length === 0) {
-      return res.status(400).json({ error: 'No logs or images were provided for analysis.' });
     }
 
     const response = await ai.models.generateContent({
       model: modelName,
       contents: { parts },
       config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        temperature,
+        systemInstruction: MARATHON_SYSTEM_INSTRUCTION,
+        temperature: isMarathon ? 0.4 : 0.2,
         responseMimeType: "application/json",
         responseSchema: RESPONSE_SCHEMA,
         thinkingConfig,
       },
     });
 
-    if (!response.text) {
-      console.warn('[LogSight] Empty response from Gemini.');
-      throw new Error('The AI engine returned an empty result. This can happen if the safety filters were triggered or if the evidence provided was insufficient.');
+    const text = response.text;
+    if (!text) {
+      throw new Error("Gemini returned an empty response. Check safety filters.");
     }
 
-    const cleanedText = response.text.replace(/```json|```/g, '').trim();
+    // Extract JSON from potential Markdown blocks
+    const cleanedText = text.replace(/```json|```/g, '').trim();
     const result = JSON.parse(cleanedText);
     res.json(result);
 
   } catch (error) {
-    console.error('[LogSight] Internal Error:', error);
+    console.error('[LogSight] Analysis Error:', error);
     res.status(500).json({ 
-      error: error.message || 'An internal error occurred in the analysis engine.',
-      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      error: error.message || 'An unexpected error occurred in the analysis engine.',
+      details: error.toString() 
     });
   }
 });
@@ -120,16 +132,25 @@ app.post('/analyze', upload.array('images'), async (req, res) => {
 app.post('/chat', async (req, res) => {
   try {
     const apiKey = process.env.API_KEY;
-    if (!apiKey) return res.status(500).json({ error: 'API_KEY not configured.' });
+    if (!apiKey) return res.status(500).json({ error: 'API_KEY missing' });
 
     const ai = new GoogleGenAI({ apiKey });
-    const { message } = req.body;
+    const { message, history } = req.body;
+
+    // Convert history to the format required by the Chat SDK
+    const contents = (history || []).map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.text }]
+    }));
+
     const chat = ai.chats.create({
       model: 'gemini-3-flash-preview',
-      config: {
-        systemInstruction: "You are an expert SRE advisor. Continue the diagnostic conversation based on the incident report findings.",
-      },
+      history: contents,
+      config: { 
+        systemInstruction: "Continue the SRE Marathon Agent diagnostic session. Answer technical queries based on previous investigation leads." 
+      }
     });
+
     const response = await chat.sendMessage({ message });
     res.json({ text: response.text });
   } catch (error) {
@@ -138,10 +159,8 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
+app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 app.listen(port, () => {
-  console.log(`LogSight Live Engine listening on port ${port}`);
+  console.log(`[LogSight] Marathon Agent active on port ${port}`);
 });

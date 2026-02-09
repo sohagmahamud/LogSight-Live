@@ -11,10 +11,19 @@ export class GeminiService {
     formData.append('mode', mode);
     formData.append('logContent', logContent || '');
     
+    // Explicitly iterate over imageFiles to process blobs for multipart upload
     for (const img of imageFiles) {
-      const response = await fetch(`data:${img.type};base64,${img.content}`);
-      const blob = await response.blob();
-      formData.append('images', blob, img.name);
+      try {
+        // Use a data URL fetch to convert base64 to Blob
+        const response = await fetch(`data:${img.type};base64,${img.content}`);
+        if (!response.ok) throw new Error("Failed to process image data");
+        
+        // Cast the result to Blob to fix 'unknown' type errors during assignment
+        const blob = (await response.blob()) as Blob;
+        formData.append('images', blob, img.name);
+      } catch (e) {
+        console.error("Error processing image for upload:", e);
+      }
     }
 
     const res = await fetch('/analyze', {
@@ -23,8 +32,17 @@ export class GeminiService {
     });
 
     if (!res.ok) {
-      const errorData = await res.json().catch(() => ({ error: 'Unknown server error' }));
-      throw new Error(errorData.error || 'Analysis failed');
+      let errorMessage = 'Analysis failed';
+      try {
+        const errorData = await res.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        // Fallback for non-JSON error pages (e.g. 502/504 Gateway errors)
+        const textError = await res.text();
+        console.error("Server returned non-JSON error:", textError);
+        errorMessage = `Server Error (${res.status}): Please check deployment logs.`;
+      }
+      throw new Error(errorMessage);
     }
 
     return await res.json();
@@ -34,11 +52,12 @@ export class GeminiService {
     const res = await fetch('/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message })
+      // Send both current message and conversation history to maintain context on the server
+      body: JSON.stringify({ message, history })
     });
 
     if (!res.ok) {
-      const errorData = await res.json().catch(() => ({ error: 'Unknown server error' }));
+      const errorData = await res.json().catch(() => ({ error: 'Chat failed' }));
       throw new Error(errorData.error || 'Chat failed');
     }
 
