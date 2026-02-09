@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Button } from './components/Button';
 import { HypothesisCard } from './components/HypothesisCard';
@@ -45,8 +44,8 @@ const App: React.FC = () => {
   };
 
   const startAnalysis = async () => {
-    if (!logs && images.length === 0) {
-      setErrorMessage("Please provide at least logs or one screenshot for analysis.");
+    if (!logs.trim() && images.length === 0) {
+      setErrorMessage("Provide logs or metric screenshots to initiate the agent.");
       return;
     }
     setIsAnalyzing(true);
@@ -57,7 +56,7 @@ const App: React.FC = () => {
       setAnalysis(result);
       setChatHistory([{ role: 'model', text: result.summary }]);
     } catch (err: any) {
-      setErrorMessage(err.message || "Engine failure during investigation.");
+      setErrorMessage(err.message || "Autonomous engine failure.");
     } finally {
       setIsAnalyzing(false);
     }
@@ -80,7 +79,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#030712] text-slate-200">
+    <div className="min-h-screen bg-[#030712] text-slate-200 selection:bg-emerald-500/30">
       <nav className="sticky top-0 z-50 glass border-b border-white/5 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
@@ -110,27 +109,27 @@ const App: React.FC = () => {
       </nav>
 
       <main className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Input Controls */}
+        {/* Input Evidence Panel */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="glass rounded-2xl p-6 space-y-6">
+          <div className="glass rounded-2xl p-6 space-y-6 border border-white/10 shadow-2xl">
             <h2 className="text-sm font-bold flex items-center gap-2 text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-              Contextual Evidence
+              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+              Incident Evidence
             </h2>
             
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Incident Logs</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Raw Log Stream</label>
                 <textarea 
                   value={logs}
                   onChange={(e) => setLogs(e.target.value)}
-                  placeholder="Paste logs or stack traces..."
-                  className="w-full h-32 bg-black/40 border border-white/10 rounded-xl p-4 text-xs mono focus:ring-1 focus:ring-emerald-500/50 outline-none transition-all custom-scrollbar"
+                  placeholder="Paste stack traces or log blocks..."
+                  className="w-full h-40 bg-black/60 border border-white/5 rounded-xl p-4 text-xs mono focus:ring-1 focus:ring-emerald-500/50 outline-none transition-all custom-scrollbar placeholder:text-slate-700"
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Dashboard Screenshots</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Visual Dashboard Frames</label>
                 <div className="grid grid-cols-2 gap-2">
                   {images.map((img, idx) => (
                     <div key={idx} className="relative group aspect-video rounded-lg overflow-hidden border border-white/10 bg-black/40">
@@ -152,7 +151,7 @@ const App: React.FC = () => {
                     className="aspect-video rounded-lg border-2 border-dashed border-white/5 flex flex-col items-center justify-center gap-1 text-slate-600 hover:border-emerald-500/40 hover:text-emerald-500/60 transition-all bg-white/2"
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                    <span className="text-[10px] font-bold uppercase">Add Frame</span>
+                    <span className="text-[10px] font-bold uppercase">Attach Frame</span>
                     <input type="file" ref={imageInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" multiple />
                   </button>
                 </div>
@@ -162,13 +161,17 @@ const App: React.FC = () => {
             <Button 
               onClick={startAnalysis} 
               isLoading={isAnalyzing}
-              className={`w-full py-4 rounded-xl ${mode === 'MARATHON' ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-indigo-600 hover:bg-indigo-500'}`}
+              className={`w-full py-4 rounded-xl text-sm font-bold tracking-wide transition-all shadow-xl ${
+                mode === 'MARATHON' 
+                  ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20' 
+                  : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/20'
+              }`}
             >
-              {mode === 'MARATHON' ? 'Begin Marathon Probe' : 'Run Quick Triage'}
+              {mode === 'MARATHON' ? 'Initiate Marathon Diagnostic' : 'Execute Rapid Triage'}
             </Button>
             
             {errorMessage && (
-              <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs flex items-start gap-2">
+              <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs flex items-start gap-3 animate-fade-in">
                 <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 {errorMessage}
               </div>
@@ -176,12 +179,15 @@ const App: React.FC = () => {
           </div>
 
           {analysis?.active_leads && analysis.active_leads.length > 0 && (
-            <div className="glass rounded-2xl p-6 animate-fade-in">
-              <h3 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-4">Continuity Ledger</h3>
-              <div className="space-y-2">
+            <div className="glass rounded-2xl p-6 animate-fade-in border border-emerald-500/10">
+              <h3 className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                Investigation Backlog
+              </h3>
+              <div className="space-y-3">
                 {analysis.active_leads.map((lead, i) => (
                   <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 text-xs text-slate-300">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1 animate-pulse"></span>
+                    <span className="text-emerald-500 shrink-0 mt-0.5">↳</span>
                     {lead}
                   </div>
                 ))}
@@ -190,110 +196,126 @@ const App: React.FC = () => {
           )}
         </div>
 
-        {/* Investigation Results */}
+        {/* Diagnostic Output Panel */}
         <div className="lg:col-span-8 space-y-8">
           {!analysis && !isAnalyzing && (
-            <div className="h-[500px] flex flex-col items-center justify-center text-slate-500 border-2 border-dashed border-white/5 rounded-3xl p-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="h-[600px] flex flex-col items-center justify-center text-slate-500 border-2 border-dashed border-white/5 rounded-3xl p-12 text-center bg-white/[0.01]">
+              <div className="w-20 h-20 rounded-2xl bg-white/5 flex items-center justify-center mb-6 shadow-inner">
+                <svg className="w-10 h-10 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-bold text-slate-300">No Investigation Active</h3>
-              <p className="max-w-xs mt-2 text-sm">Upload logs or metric dashboard screenshots to start the autonomous diagnostic engine.</p>
+              <h3 className="text-xl font-bold text-slate-300">Engine Standby</h3>
+              <p className="max-w-xs mt-3 text-sm leading-relaxed text-slate-500">Provide logs or dashboard screenshots to awaken the autonomous diagnostic core.</p>
             </div>
           )}
 
           {isAnalyzing && (
             <div className="space-y-6">
-              <div className="h-64 glass rounded-3xl flex flex-col items-center justify-center gap-6 p-8 border-emerald-500/20">
+              <div className="h-[400px] glass rounded-3xl flex flex-col items-center justify-center gap-8 p-12 border-emerald-500/20 shadow-2xl relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none"></div>
                 <div className="relative">
-                  <div className="w-20 h-20 rounded-full border-2 border-emerald-500/20 border-t-emerald-500 animate-spin"></div>
+                  <div className="w-24 h-24 rounded-full border-2 border-emerald-500/10 border-t-emerald-500 animate-spin"></div>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <svg className="w-8 h-8 text-emerald-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    <svg className="w-10 h-10 text-emerald-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path d="M13 10V3L4 14h7v7l9-11h-7z" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
                 </div>
-                <div className="text-center space-y-2">
-                  <p className="text-emerald-400 font-bold tracking-widest text-sm uppercase">Agent Thinking Loop Active</p>
-                  <p className="text-slate-500 text-xs">Synthesizing multimodal evidence and generating Thought Signatures...</p>
+                <div className="text-center space-y-3 z-10">
+                  <p className="text-emerald-400 font-bold tracking-[0.2em] text-sm uppercase">Recursive Thinking Signature...</p>
+                  <p className="text-slate-500 text-xs max-w-sm mx-auto">Gemini 3 Pro is synthesizing multimodal evidence and conducting deep-dive architectural probing.</p>
+                </div>
+                <div className="w-64 h-1 bg-white/5 rounded-full overflow-hidden mt-4">
+                  <div className="h-full bg-emerald-500 animate-[loading_2s_ease-in-out_infinite]"></div>
                 </div>
               </div>
             </div>
           )}
 
           {analysis && (
-            <div className="space-y-8 animate-fade-in">
-              <div className="space-y-4">
+            <div className="space-y-10 animate-fade-in">
+              {/* Summary Header */}
+              <div className="glass p-8 rounded-3xl border border-white/5 relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-4 opacity-10">
+                  <svg className="w-32 h-32" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg>
+                </div>
+                <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-4">Investigation Summary</h3>
+                <p className="text-lg text-slate-100 font-medium leading-relaxed">{analysis.summary}</p>
+              </div>
+
+              {/* Ledger */}
+              <div className="space-y-6">
                 <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 flex items-center gap-2">
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  Autonomous Investigation Ledger
+                  <svg className="w-3 h-3 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  Investigation Timeline
                 </h3>
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {analysis.investigation_ledger.map((step, i) => (
-                    <div key={i} className="relative pl-10 border-l border-white/10 ml-4 pb-6 last:pb-0">
+                    <div key={i} className="relative pl-10 border-l border-white/5 ml-4 pb-8 last:pb-0">
                       <div className={`absolute -left-2.5 top-0 w-5 h-5 rounded-full border-4 border-[#030712] shadow-xl ${
                         step.status === 'CONFIRMED' ? 'bg-emerald-500' : step.status === 'REFUTED' ? 'bg-rose-500' : 'bg-indigo-500'
                       }`}></div>
-                      <div className="glass rounded-2xl p-6 space-y-4 hover:border-white/20 transition-all">
+                      <div className="glass rounded-2xl p-6 space-y-5 hover:border-white/10 transition-all shadow-xl group">
                         <div className="flex justify-between items-center">
                           <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-bold text-slate-500 mono">{step.timestamp}</span>
+                            <span className="text-[10px] font-bold text-slate-500 mono bg-white/5 px-2 py-0.5 rounded">{step.timestamp}</span>
                             <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                              step.level === 'DEEP_DIVE' ? 'bg-purple-500/20 text-purple-400' : 'bg-indigo-500/20 text-indigo-400'
+                              step.level === 'DEEP_DIVE' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/20' : 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/20'
                             }`}>
                               {step.level}
                             </span>
                           </div>
-                          <span className={`text-[10px] font-bold uppercase ${
+                          <span className={`text-[10px] font-bold uppercase tracking-widest ${
                             step.status === 'CONFIRMED' ? 'text-emerald-400' : step.status === 'REFUTED' ? 'text-rose-400' : 'text-indigo-400'
                           }`}>
                             {step.status}
                           </span>
                         </div>
-                        <div className="p-4 bg-emerald-500/5 rounded-xl border border-emerald-500/10 border-l-2">
-                           <p className="text-[10px] font-bold text-emerald-400/80 mb-2 flex items-center gap-1">
+                        <div className="p-4 bg-emerald-500/[0.02] rounded-xl border border-emerald-500/10 border-l-2 border-l-emerald-500">
+                           <p className="text-[10px] font-bold text-emerald-400/70 mb-2 flex items-center gap-1.5 uppercase tracking-widest">
                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-                             THOUGHT SIGNATURE
+                             Thought Signature
                            </p>
-                           <p className="text-xs italic text-slate-400 leading-relaxed">{step.thought_signature}</p>
+                           <p className="text-xs italic text-slate-400 leading-relaxed font-medium">{step.thought_signature}</p>
                         </div>
-                        <p className="text-sm font-semibold text-slate-200 leading-relaxed">{step.finding}</p>
+                        <p className="text-sm font-semibold text-slate-200 leading-relaxed group-hover:text-white transition-colors">{step.finding}</p>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-4">
+              {/* Hypotheses Grid */}
+              <div className="space-y-6">
                 <h3 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-2 flex items-center gap-2">
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                  Validated Hypotheses
+                  <svg className="w-3 h-3 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  Root Cause Hypotheses
                 </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {analysis.root_cause_hypotheses.map((hyp, i) => (
                     <HypothesisCard key={i} hypothesis={hyp} />
                   ))}
                 </div>
               </div>
 
-              <div className="glass rounded-3xl overflow-hidden flex flex-col h-[500px]">
-                <div className="p-4 border-b border-white/5 bg-white/2 flex items-center justify-between">
+              {/* Chat Interface */}
+              <div className="glass rounded-3xl overflow-hidden flex flex-col h-[600px] border border-white/5 shadow-2xl">
+                <div className="p-5 border-b border-white/5 bg-white/[0.02] flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <h3 className="text-sm font-bold text-slate-300">Expert SRE Advisor</h3>
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.8)]"></div>
+                    <h3 className="text-sm font-bold text-slate-300">Expert SRE Advisor Chat</h3>
                   </div>
-                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Active Session</span>
+                  <span className="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em]">Context-Aware Session</span>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+                <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar bg-black/20">
                   {chatHistory.map((msg, idx) => (
-                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed ${
+                    <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}>
+                      <div className={`max-w-[80%] p-5 rounded-2xl text-sm leading-relaxed ${
                         msg.role === 'user' 
-                          ? 'bg-emerald-600 text-white shadow-lg' 
-                          : 'bg-slate-800/80 text-slate-200 border border-white/5 shadow-inner'
+                          ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/10' 
+                          : 'bg-slate-800/60 text-slate-200 border border-white/5 shadow-xl'
                       }`}>
                         {msg.text}
                       </div>
@@ -301,7 +323,7 @@ const App: React.FC = () => {
                   ))}
                   {isChatting && (
                     <div className="flex justify-start">
-                      <div className="bg-slate-800/80 p-4 rounded-2xl flex gap-1.5 items-center">
+                      <div className="bg-slate-800/60 p-5 rounded-2xl flex gap-2 items-center border border-white/5">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:-0.3s]"></span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce [animation-delay:-0.15s]"></span>
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-bounce"></span>
@@ -312,21 +334,21 @@ const App: React.FC = () => {
 
                 <form 
                   onSubmit={(e) => { e.preventDefault(); sendChatMessage(); }}
-                  className="p-4 bg-black/40 border-t border-white/5 flex gap-2"
+                  className="p-6 bg-black/40 border-t border-white/5 flex gap-3"
                 >
                   <input 
                     type="text"
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
-                    placeholder="Inquire about specific leads or remediation steps..."
-                    className="flex-1 bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:border-emerald-500/50 transition-all placeholder:text-slate-600"
+                    placeholder="Inquire about specific leads or remediation next-steps..."
+                    className="flex-1 bg-slate-900/80 border border-white/10 rounded-2xl px-5 py-4 text-sm outline-none focus:border-emerald-500/50 transition-all placeholder:text-slate-600"
                   />
                   <button 
                     type="submit"
                     disabled={!chatInput.trim() || isChatting}
-                    className="w-12 h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 transition-all flex items-center justify-center shadow-lg shadow-emerald-500/20"
+                    className="w-14 h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 transition-all flex items-center justify-center shadow-lg shadow-emerald-500/20 active:scale-95"
                   >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                   </button>
                 </form>
               </div>
@@ -335,26 +357,33 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <footer className="mt-12 py-12 border-t border-white/5 text-center text-slate-600">
-        <div className="max-w-xl mx-auto px-6 space-y-6">
-          <p className="text-xs uppercase tracking-[0.3em] font-bold">Marathon Core Engine</p>
-          <div className="flex items-center justify-center gap-6">
-             <div className="flex flex-col items-center gap-1">
-               <span className="text-[10px] font-bold text-slate-500">Multimodal</span>
-               <div className="w-8 h-1 rounded-full bg-emerald-500/30"></div>
+      <footer className="mt-20 py-16 border-t border-white/5 text-center text-slate-600">
+        <div className="max-w-2xl mx-auto px-6 space-y-8">
+          <p className="text-xs uppercase tracking-[0.4em] font-bold text-slate-500">Marathon Autonomous Engine V3.1</p>
+          <div className="flex items-center justify-center gap-10">
+             <div className="flex flex-col items-center gap-2">
+               <span className="text-[10px] font-bold text-slate-600 tracking-widest uppercase">Thinking Budget</span>
+               <div className="w-12 h-1 rounded-full bg-emerald-500/20 border border-emerald-500/30"></div>
              </div>
-             <div className="flex flex-col items-center gap-1">
-               <span className="text-[10px] font-bold text-slate-500">Autonomous</span>
-               <div className="w-8 h-1 rounded-full bg-indigo-500/30"></div>
+             <div className="flex flex-col items-center gap-2">
+               <span className="text-[10px] font-bold text-slate-600 tracking-widest uppercase">Multimodal Context</span>
+               <div className="w-12 h-1 rounded-full bg-indigo-500/20 border border-indigo-500/30"></div>
              </div>
-             <div className="flex flex-col items-center gap-1">
-               <span className="text-[10px] font-bold text-slate-500">SRE-Expert</span>
-               <div className="w-8 h-1 rounded-full bg-purple-500/30"></div>
+             <div className="flex flex-col items-center gap-2">
+               <span className="text-[10px] font-bold text-slate-600 tracking-widest uppercase">Self-Correction</span>
+               <div className="w-12 h-1 rounded-full bg-purple-500/20 border border-purple-500/30"></div>
              </div>
           </div>
-          <p className="text-[10px] italic">Powered by Gemini 3 Pro with Recursive Thinking Signatures</p>
+          <p className="text-[11px] italic text-slate-700">Powered by Gemini 3 Pro with Recursive Thought Signatures</p>
         </div>
       </footer>
+
+      <style>{`
+        @keyframes loading {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(200%); }
+        }
+      `}</style>
     </div>
   );
 };
