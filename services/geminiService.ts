@@ -25,6 +25,7 @@ export class GeminiService {
     try {
       const res = await fetch('/analyze', {
         method: 'POST',
+        // Note: Do not manually set Content-Type header when sending FormData
         body: formData
       });
 
@@ -34,7 +35,11 @@ export class GeminiService {
           const errorData = await res.json();
           errorMessage = errorData.error || errorMessage;
         } catch (e) {
-          errorMessage = `Server Error (${res.status}): The investigation engine is temporarily unavailable.`;
+          if (res.status === 413) {
+            errorMessage = "Payload too large. Please try with fewer images or shorter logs.";
+          } else {
+            errorMessage = `Server Error (${res.status}): The investigation engine encountered a routing error.`;
+          }
         }
         throw new Error(errorMessage);
       }

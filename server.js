@@ -8,10 +8,16 @@ import { GoogleGenAI, Type } from '@google/genai';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = process.env.PORT || 8080;
-const upload = multer({ storage: multer.memoryStorage() });
 
-app.use(express.json());
-app.use(express.static(__dirname));
+// Multer for handling file uploads (multipart/form-data)
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024 } // 20MB limit
+});
+
+// Middleware for JSON and URL-encoded bodies with increased limits
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 const MARATHON_SYSTEM_INSTRUCTION = `You are an Autonomous SRE Marathon Agent. 
 Your task is to conduct a multi-level autonomous investigation of a production incident.
@@ -66,6 +72,8 @@ const RESPONSE_SCHEMA = {
   },
   required: ["summary", "investigation_ledger", "root_cause_hypotheses", "next_actions", "active_leads"]
 };
+
+// --- API Routes ---
 
 app.post('/analyze', upload.array('images'), async (req, res) => {
   try {
@@ -154,7 +162,13 @@ app.post('/chat', async (req, res) => {
   }
 });
 
-app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+// --- Static Serving ---
+
+app.use(express.static(__dirname));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 app.listen(port, () => {
   console.log(`[LogSight] Marathon Agent active on port ${port}`);
