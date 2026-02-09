@@ -49,19 +49,20 @@ app.post('/analyze', upload.array('images'), async (req, res) => {
   try {
     const apiKey = process.env.API_KEY;
     if (!apiKey) {
-      console.error('CRITICAL: API_KEY is not set in environment variables.');
-      return res.status(500).json({ error: 'Server configuration error: Missing API Key' });
+      console.error('CRITICAL: API_KEY is not defined in environment variables.');
+      return res.status(500).json({ error: 'Server config error: API_KEY is missing. Ensure the environment variable is set in Cloud Run.' });
     }
 
     const ai = new GoogleGenAI({ apiKey });
     const { mode, logContent } = req.body;
     const files = req.files || [];
     
-    console.log(`Starting analysis. Mode: ${mode}, Logs: ${logContent?.length || 0} chars, Images: ${files.length}`);
-
+    // Defaulting to Gemini 3 Flash as it's multimodal and supports schema
     const modelName = mode === 'QUICK' ? 'gemini-3-flash-preview' : 'gemini-3-pro-preview';
     const temperature = mode === 'QUICK' ? 0.2 : 0.4;
-    const thinkingConfig = mode === 'DEEP' ? { thinkingBudget: 16384 } : undefined;
+    const thinkingConfig = mode === 'DEEP' ? { thinkingBudget: 8192 } : undefined;
+
+    console.log(`[LogSight] Analysis Request - Mode: ${mode}, Model: ${modelName}, Logs: ${logContent?.length || 0} bytes, Images: ${files.length}`);
 
     const parts = [];
     if (logContent) {
@@ -83,7 +84,7 @@ app.post('/analyze', upload.array('images'), async (req, res) => {
     }
 
     if (parts.length === 0) {
-      return res.status(400).json({ error: 'No content provided for analysis' });
+      return res.status(400).json({ error: 'No logs or images were provided for analysis.' });
     }
 
     const response = await ai.models.generateContent({
@@ -99,15 +100,19 @@ app.post('/analyze', upload.array('images'), async (req, res) => {
     });
 
     if (!response.text) {
-      throw new Error('Gemini returned an empty response');
+      console.warn('[LogSight] Empty response from Gemini.');
+      throw new Error('The AI engine returned an empty result. This can happen if the safety filters were triggered or if the evidence provided was insufficient.');
     }
 
-    res.json(JSON.parse(response.text));
+    const cleanedText = response.text.replace(/```json|```/g, '').trim();
+    const result = JSON.parse(cleanedText);
+    res.json(result);
+
   } catch (error) {
-    console.error('Analysis Error Detail:', error);
+    console.error('[LogSight] Internal Error:', error);
     res.status(500).json({ 
-      error: error.message,
-      suggestion: 'Check if the API Key has sufficient quotas or if the input is too large.'
+      error: error.message || 'An internal error occurred in the analysis engine.',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 });
@@ -115,22 +120,20 @@ app.post('/analyze', upload.array('images'), async (req, res) => {
 app.post('/chat', async (req, res) => {
   try {
     const apiKey = process.env.API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({ error: 'Server configuration error: Missing API Key' });
-    }
+    if (!apiKey) return res.status(500).json({ error: 'API_KEY not configured.' });
 
     const ai = new GoogleGenAI({ apiKey });
     const { message } = req.body;
     const chat = ai.chats.create({
       model: 'gemini-3-flash-preview',
       config: {
-        systemInstruction: "You are an expert SRE. Continue the incident analysis conversation based on the previous findings.",
+        systemInstruction: "You are an expert SRE advisor. Continue the diagnostic conversation based on the incident report findings.",
       },
     });
     const response = await chat.sendMessage({ message });
     res.json({ text: response.text });
   } catch (error) {
-    console.error('Chat Error:', error);
+    console.error('[LogSight] Chat Error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -140,5 +143,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`LogSight Live SRE Engine listening on port ${port}`);
+  console.log(`LogSight Live Engine listening on port ${port}`);
 });
