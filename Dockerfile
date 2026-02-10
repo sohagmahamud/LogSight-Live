@@ -18,6 +18,7 @@ ARG VITE_GEMINI_API_KEY
 ENV VITE_GEMINI_API_KEY=$VITE_GEMINI_API_KEY
 
 # Build the frontend
+RUN echo "Verifying build-arg: VITE_GEMINI_API_KEY is $(echo -n $VITE_GEMINI_API_KEY | wc -c) chars long"
 RUN npm run build
 
 # Expose port (Cloud Run uses PORT environment variable)
