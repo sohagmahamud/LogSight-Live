@@ -92,9 +92,9 @@ The application uses **Vite** to bundle the React frontend. For production deplo
      - **Value**: `your-gemini-api-key`
 
 2. **Automated Injection**:
-   - `cloudbuild.yaml` passes `_GEMINI_API_KEY` to the Docker build as a build-arg.
+   - `cloudbuild.yaml` passes `_GEMINI_API_KEY` to the Docker build as `VITE_GEMINI_API_KEY`.
    - `Dockerfile` uses the build-arg to set an environment variable before running `npm run build`.
-   - `vite.config.ts` bakes this value into the static production bundle.
+   - `vite.config.ts` bakes this value into the static production bundle using the `VITE_` prefix convention.
 
 ---
 
@@ -121,16 +121,13 @@ The application uses **Vite** to bundle the React frontend. For production deplo
 3. **Set environment variables**
    Create a `.env` file in the root:
    ```env
-   GEMINI_API_KEY=your-api-key-here
+   VITE_GEMINI_API_KEY=your-api-key-here
    ```
 
 4. **Run the development server**
    ```bash
    npm run dev
    ```
-
-5. **Access the application**
-   Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
@@ -140,12 +137,10 @@ The application uses **Vite** to bundle the React frontend. For production deplo
 
 ```bash
 # Build the Docker image with build-arg
-docker build --build-arg GEMINI_API_KEY=your-key -t logsight-live .
+docker build --build-arg VITE_GEMINI_API_KEY=your-key -t logsight-live .
 
 # Run the container
 docker run -p 8080:8080 logsight-live
-
-# Access at http://localhost:8080
 ```
 
 ---

@@ -57,10 +57,10 @@ const RESPONSE_SCHEMA = {
 
 export class GeminiService {
   private static getAI() {
-    // Relying on the platform injected API_KEY
-    const apiKey = (process.env as any).API_KEY;
+    // Vite bakes VITE_ prefixed variables into the bundle at build time
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error("API_KEY environment variable is missing. Please ensure it is set in your Cloud Run environment.");
+      throw new Error("GEMINI API Key is missing. Ensure VITE_GEMINI_API_KEY is set during the Cloud Build process.");
     }
     return new GoogleGenAI({ apiKey });
   }
@@ -73,7 +73,7 @@ export class GeminiService {
     const ai = this.getAI();
     const isMarathon = mode === 'MARATHON';
     const model = isMarathon ? 'gemini-3-pro-preview' : 'gemini-3-flash-preview';
-    
+
     // Max thinking budget for deep reasoning in Marathon mode
     const thinkingConfig = isMarathon ? { thinkingBudget: 32768 } : undefined;
 
@@ -109,7 +109,7 @@ export class GeminiService {
 
       const text = response.text;
       if (!text) throw new Error("Empty response from investigation engine.");
-      
+
       // Remove possible markdown formatting from response
       const cleaned = text.replace(/```json|```/g, '').trim();
       return JSON.parse(cleaned);
