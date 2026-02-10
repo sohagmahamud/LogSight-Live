@@ -81,23 +81,20 @@ By combining recursive thinking with multimodal context, LogSight Live doesn't j
 
 ## 🚀 Deployment
 
-### Google Cloud Run
-The application is optimized for serverless deployment on Google Cloud Run with automated CI/CD:
+### Build-Time Configuration (Cloud Build Triggers)
 
-1. **Cloud Build Trigger**: Automatically builds on push to `main` branch
-2. **Docker Container**: Node.js 20 slim image with production dependencies
-3. **Container Registry**: Images tagged with commit SHA for versioning
-4. **Auto-Deployment**: Seamless deployment to Cloud Run on successful build
+The application uses **Vite** to bundle the React frontend. For production deployment, the API key is injected at **build time** using Docker build arguments.
 
-### Environment Configuration
+1. **Configure Cloud Build Trigger**:
+   - In the Google Cloud Console, go to **Cloud Build > Triggers**.
+   - Under **Variables**, add:
+     - **Name**: `_GEMINI_API_KEY`
+     - **Value**: `your-gemini-api-key`
 
-Set the Gemini API key in Cloud Run:
-
-```bash
-gcloud run services update logsight-live \
-  --update-env-vars GEMINI_API_KEY=your-api-key-here \
-  --region us-central1
-```
+2. **Automated Injection**:
+   - `cloudbuild.yaml` passes `_GEMINI_API_KEY` to the Docker build as a build-arg.
+   - `Dockerfile` uses the build-arg to set an environment variable before running `npm run build`.
+   - `vite.config.ts` bakes this value into the static production bundle.
 
 ---
 
@@ -122,18 +119,18 @@ gcloud run services update logsight-live \
    ```
 
 3. **Set environment variables**
-   Create a `.env.local` file:
+   Create a `.env` file in the root:
    ```env
    GEMINI_API_KEY=your-api-key-here
    ```
 
 4. **Run the development server**
    ```bash
-   npm start
+   npm run dev
    ```
 
 5. **Access the application**
-   Open [http://localhost:8080](http://localhost:8080)
+   Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
@@ -142,11 +139,11 @@ gcloud run services update logsight-live \
 ### Build and Run Locally
 
 ```bash
-# Build the Docker image
-docker build -t logsight-live .
+# Build the Docker image with build-arg
+docker build --build-arg GEMINI_API_KEY=your-key -t logsight-live .
 
 # Run the container
-docker run -p 8080:8080 -e GEMINI_API_KEY=your-key logsight-live
+docker run -p 8080:8080 logsight-live
 
 # Access at http://localhost:8080
 ```

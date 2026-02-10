@@ -13,6 +13,10 @@ RUN npm install
 # Copy all application files
 COPY . .
 
+# Accept API key as build argument
+ARG GEMINI_API_KEY
+ENV GEMINI_API_KEY=$GEMINI_API_KEY
+
 # Build the frontend
 RUN npm run build
 
