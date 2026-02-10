@@ -10,12 +10,15 @@ const port = process.env.PORT || 8080;
 console.log(`[LogSight] Initializing static server...`);
 console.log(`[LogSight] Root directory: ${__dirname}`);
 
-// Serve static files from the root directory
-app.use(express.static(__dirname));
+// Serve static files from the build directory
+const distPath = path.join(__dirname, 'dist');
+app.use(express.static(distPath));
+
+console.log(`[LogSight] Serving dist from: ${distPath}`);
 
 // SPA Catch-all: Redirect all non-file requests to index.html
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
 app.listen(port, () => {
